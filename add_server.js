@@ -12,7 +12,7 @@ app.use(express.static(path.join(__dirname))); // Óåñâßñåé ôï html ó�
 const db = mysql.createConnection({
     host: 'localhost',
     user: 'root',
-    password: '', // ÂÜëå ôïí êùäéêü óïõ
+    password: '11223344ww@@', // ÂÜëå ôïí êùäéêü óïõ
     database: 'mygame_db' // ÂÜëå ôï üíïìá ôçò âÜóçò óïõ
 });
 
