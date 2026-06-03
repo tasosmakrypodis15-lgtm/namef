@@ -1,32 +1,49 @@
 const express = require('express');
-const mysql = require('mysql');
+const { Pool } = require('pg'); // Αλλάξαμε τη βιβλιοθήκη σε PostgreSQL (pg)
 const path = require('path');
-const axios = require('axios'); // Åäþ âÜëáìå ôï axios ãéá ôï áõôüìáôï ping
+const axios = require('axios');
 
 const app = express();
 
 app.use(express.json());
-app.use(express.static(path.join(__dirname))); // Óåñâßñåé ôï html óïõ
+app.use(express.static(path.join(__dirname))); 
 
-// Óýíäåóç ìå ôç âÜóç óïõ
-const db = mysql.createConnection({
-    host: 'localhost',
-    user: 'root',
-    password: '11223344ww@@', // ÂÜëå ôïí êùäéêü óïõ
-    database: 'mygame_db' // ÂÜëå ôï üíïìá ôçò âÜóçò óïõ
+// ==========================================================
+// ΣΥΝΔΕΣΗ ΜΕ ΤΗ ΝΕΑ LIVE ΒΑΣΗ ΣΟΥ ΣΤΟ RENDER
+// ==========================================================
+// Εδώ, μέσα στα μονά εισαγωγικά '', κάνε επικόλληση (Paste) 
+// το δικό σου Internal Database URL που πήρες από το Render!
+const connectionString = 'postgresql://my_game_db_zekt_user:dMVmfpMkLD78lRjbxWnWBhbGvlyS1jjo@dpg-d8g3nv3tqb8s73ci7k5g-a/my_game_db_zekt';
+
+const pool = new Pool({
+    connectionString: connectionString,
 });
 
-db.connect((err) => {
-    if (err) throw err;
-    console.log('Connected to MySQL Database!');
+pool.connect((err) => {
+    if (err) {
+        console.error('Σφάλμα σύνδεσης στη βάση του Render:', err.message);
+        return;
+    }
+    console.log('Connected to Render PostgreSQL Database successfully! 🎉');
+    
+    // Αυτόματη δημιουργία του πίνακα "users" αν δεν υπάρχει ήδη στη νέα βάση
+    const createTableQuery = 
+        CREATE TABLE IF NOT EXISTS users (
+            id SERIAL PRIMARY KEY,
+            name VARCHAR(255) NOT NULL
+        );
+    ;
+    pool.query(createTableQuery, (err) => {
+        if (err) console.error('Σφάλμα κατά τη δημιουργία του πίνακα:', err.message);
+    });
 });
 
-// Ôï Route ðïõ ðáßñíåé ÌÏÍÏ ôï üíïìá êáé ôï âÜæåé óôç âÜóç
+// Το Route για το όνομα
 app.post('/add-name', (req, res) => {
     const userName = req.body.name;
     
-    const query = 'INSERT INTO users (name) VALUES (?)'; 
-    db.query(query, [userName], (err, result) => {
+    const query = 'INSERT INTO users (name) VALUES ($1)'; // Στην pg βάζουμε $1 αντί για ?
+    pool.query(query, [userName], (err, result) => {
         if (err) {
             console.error(err);
             return res.status(500).send('Database error');
@@ -37,22 +54,17 @@ app.post('/add-name', (req, res) => {
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-   console.log("Server running on port " + PORT);
+    console.log("Server running on port " + PORT);
 });
 
-// ==========================================
-// ÊÏËÐÏ ÊÅÅP-ALIVE: Ãéá íá ìçí êïéìÜôáé ï Server óôï Render
-// ==========================================
+// Keep-alive για να μην κοιμάται ο server
 setInterval(() => {
-    // Åäþ, üôáí ðÜñåéò ôï Ýôïéìï link áðü ôï Render, èá áíôéêáôáóôÞóåéò 
-    // ôï "ôï-äéêü-óïõ-site.onrender.com" ìå ôï ðñáãìáôéêü óïõ link!
-    const SITE_URL = ''; 
-    
+    const SITE_URL = 'https://namef.onrender.com'; 
     axios.get(SITE_URL)
         .then(() => {
-            console.log('Auto-Ping: Ï Server êñÜôçóå ôïí åáõôü ôïõ îýðíéï!');
+            console.log('Auto-Ping: Ο Server κράτησε τον εαυτό του ξύπνιο!');
         })
         .catch((err) => {
             console.error('Auto-Ping Error:', err.message);
         });
-}, 600000); // 600.000 milliseconds = 10 ëåðôÜ
+}, 600000);
